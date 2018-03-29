@@ -17,23 +17,33 @@ def generate_2d_image(sz):
     _im[int(sz/2), int(sz/2)] = 255
     return X, Y, _im
 
-def generate_3d_vol(sz):
+def generate_3d_vol(sz, y_loc, z_loc):
     _vol = np.zeros((sz, sz, sz))
-    _vol[:, int(sz/2), int(sz/2)] = 255
+    _vol[:, y_loc, z_loc] = 255
+
     return _vol
 
 def basic_psf(im):
     _im = np.copy(im) # local copy for transforms
     _im_fft = np.fft.fft2(_im)
     _rd_us = np.zeros(_im.shape)
-    _im_fft_rd_us = np.copy(_im_fft)
+    _im_fft_rd_us = np.copy(_im_fft)#
     mask = np.random.randint(0,2,size=_im.shape).astype(np.bool)
 
     # use your mask to replace values in your input array
     _im_fft_rd_us[mask] = _rd_us[mask]
     _im_rd_us = np.fft.ifft2(_im_fft_rd_us)
-    print(_im_rd_us)
     return _im_fft, _im_fft_rd_us, _im_rd_us
+
+def TPSF_2DFT(vol, fft_axes):
+    """ Undersamples every slice (z-axis) using the same pattern"""
+    _vol = np.copy(vol)
+    W, H, D = _vol.shape
+    _rd_us = np.zeros(H, D)
+    mask = np.random.randint(0,2,size=(H, D)).astype(np.bool)
+    _vol_fft = np.fft.fftn(_vol, axes=fft_axes)
+    _vol_fft_rd_us = np.copy(_vol_fft)
+    _vol_fft_rd_us[:, mask] = _rd_us[mask]
 
 def plot_surface(X, Y, images):
     for i, im in enumerate(images):
@@ -83,7 +93,6 @@ def dwt2(_im, _lp, _hp, levels):
         _dwt2d[:M2, :N2] = dwt2(_dwt2d[:M2, :N2], _lp, _hp, levels=levels-1)  # recursive call for LL #
 
     return _dwt2d
-
 
 def idwt2(_dwt2d, _lp, _hp, levels):
     """
@@ -160,13 +169,13 @@ if __name__ == '__main__':
     # wavelet_im = np.zeros(im.shape)
     # plot_surface(X, Y, [im])
     #
-    # wl_name = 'haar'  # TODO: vary type of wavelet #
+    # wl_name = 'haar'  # TODO: vary type of wavelet #vol_img = sitk.Image(sz,sz,sz,sitk.sitkUInt8)
     # lp_d, hp_d, lp_r, hp_r = map(np.array, pywt.Wavelet(wl_name).filter_bank)
-    #
+    # #
     # # number of decomposition levels #
     # num_levels = 2  # TODO: vary number of decomposition levels #
     #
-    # # apply discrete wavelet transform (DWT) #
+    # # apply discrete wavelet tran_fftsform (DWT) #
     # dwt = dwt2(im, lp_d, hp_d, levels=num_levels)  # TODO: call wavelet transform #
     # (M, N) = dwt.shape
     # (M2, N2) = map(lambda x: int(np.ceil(x/2)), (M, N))
@@ -180,21 +189,7 @@ if __name__ == '__main__':
     # plot_surface(X, Y, [wavelet_im_rd_us])
     # plt.show()
 
-    # make a black volume
-    vol_img = sitk.Image(100,100,100,sitk.sitkUInt8)
-
-    # make a white slice
-    slice_img = sitk.Image(100,100,sitk.sitkUInt8)
-    slice_img = slice_img + 200
-
-    # convert the 2d slice into a 3d volume
-    slice_vol = sitk.JoinSeries(slice_img)
-    slice_array = sitk.GetArrayFromImage(slice_vol)
-    print(slice_array)
-    # z insertion location
-    z = 42
-
-    # paste the 3d white slice into the black volume
-    pasted_img = sitk.Paste(vol_img, slice_vol, slice_vol.GetSize(), destinationIndex=[0,0,z])
-
-    # sitk.Show(pasted_img)
+    # vol = generate_3d_vol(15, 5, 5)
+    # # vol_rd_us = TPSF_2DFT(vol)
+    #
+    # print(vol[:, 5, 5])
