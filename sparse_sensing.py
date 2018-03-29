@@ -9,13 +9,18 @@ from scipy.stats.distributions import norm
 from mpl_toolkits.mplot3d import Axes3D
 
 
-def generate_image(size):
-    X = np.linspace(-10, 10, size)
+def generate_2d_image(sz):
+    X = np.linspace(-10, 10, sz)
     Y = X
     X,Y = np.meshgrid(X, Y)
-    _im = np.zeros((size, size))
-    _im[int(size/2), int(size/2)] = 255
+    _im = np.zeros((sz, sz))
+    _im[int(sz/2), int(sz/2)] = 255
     return X, Y, _im
+
+def generate_3d_vol(sz):
+    _vol = np.zeros((sz, sz, sz))
+    _vol[:, int(sz/2), int(sz/2)] = 255
+    return _vol
 
 def basic_psf(im):
     _im = np.copy(im) # local copy for transforms
@@ -151,40 +156,45 @@ def idwt2(_dwt2d, _lp, _hp, levels):
     return _im
 
 if __name__ == '__main__':
-    X, Y, im = generate_image(64)
-    wavelet_im = np.zeros(im.shape)
-    plot_surface(X, Y, [im])
+    # X, Y, im = generate_2d_image(64)
+    # wavelet_im = np.zeros(im.shape)
+    # plot_surface(X, Y, [im])
+    #
+    # wl_name = 'haar'  # TODO: vary type of wavelet #
+    # lp_d, hp_d, lp_r, hp_r = map(np.array, pywt.Wavelet(wl_name).filter_bank)
+    #
+    # # number of decomposition levels #
+    # num_levels = 2  # TODO: vary number of decomposition levels #
+    #
+    # # apply discrete wavelet transform (DWT) #
+    # dwt = dwt2(im, lp_d, hp_d, levels=num_levels)  # TODO: call wavelet transform #
+    # (M, N) = dwt.shape
+    # (M2, N2) = map(lambda x: int(np.ceil(x/2)), (M, N))
+    # wavelet_im[M2:, N2:] = dwt[M2:, N2:] # partial wavelet image
+    #
+    # idwt_im = idwt2(wavelet_im, lp_r, hp_r, levels=num_levels)
+    #
+    # wl_im_fft, wl_im_fft_rd_us, wl_im_rd_us = basic_psf(idwt_im)
+    #
+    # wavelet_im_rd_us = dwt2(np.real(wl_im_rd_us), lp_d, hp_d, levels=num_levels)
+    # plot_surface(X, Y, [wavelet_im_rd_us])
+    # plt.show()
 
-    wl_name = 'haar'  # TODO: vary type of wavelet #
-    lp_d, hp_d, lp_r, hp_r = map(np.array, pywt.Wavelet(wl_name).filter_bank)
+    # make a black volume
+    vol_img = sitk.Image(100,100,100,sitk.sitkUInt8)
 
-    # number of decomposition levels #
-    num_levels = 2  # TODO: vary number of decomposition levels #
+    # make a white slice
+    slice_img = sitk.Image(100,100,sitk.sitkUInt8)
+    slice_img = slice_img + 200
 
-    # padding to avoid border effects #
-    # padding = num_levels * 2 * len(lp_d)
+    # convert the 2d slice into a 3d volume
+    slice_vol = sitk.JoinSeries(slice_img)
+    slice_array = sitk.GetArrayFromImage(slice_vol)
+    print(slice_array)
+    # z insertion location
+    z = 42
 
-    # apply padding to image #
-    # im_pad = np.pad(im, padding, mode='constant')
-    # M_pad, N_pad = im_pad.shape
+    # paste the 3d white slice into the black volume
+    pasted_img = sitk.Paste(vol_img, slice_vol, slice_vol.GetSize(), destinationIndex=[0,0,z])
 
-    # apply discrete wavelet transform (DWT) #
-    dwt = dwt2(im, lp_d, hp_d, levels=num_levels)  # TODO: call wavelet transform #
-    (M, N) = dwt.shape
-    (M2, N2) = map(lambda x: int(np.ceil(x/2)), (M, N))
-    wavelet_im[M2:, N2:] = dwt[M2:, N2:] # partial wavelet image
-
-    idwt_im = idwt2(wavelet_im, lp_r, hp_r, levels=num_levels)
-
-    # im_fft, im_fft_rd_us, im_rd_us = basic_psf(image)
-    wl_im_fft, wl_im_fft_rd_us, wl_im_rd_us = basic_psf(idwt_im)
-
-    wavelet_im_rd_us = dwt2(np.real(wl_im_rd_us), lp_d, hp_d, levels=num_levels)
-    plot_surface(X, Y, [wavelet_im_rd_us])
-
-
-    # psf_im = [im_fft, im_fft_rd_us, im_rd_us]
-    # plot_surface(X, Y, psf_im)
-    # plot_surface(X, Y, [dwt])
-    # plot_surface(X, Y, [wavelet_im])
-    plt.show()
+    # sitk.Show(pasted_img)
