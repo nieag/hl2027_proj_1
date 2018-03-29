@@ -18,10 +18,13 @@ def generate_2d_image(sz):
     return X, Y, _im
 
 def generate_3d_vol(sz, y_loc, z_loc):
+    X = np.linspace(-10, 10, sz)
+    Y = X
+    X,Y = np.meshgrid(X, Y)
     _vol = np.zeros((sz, sz, sz))
     _vol[:, y_loc, z_loc] = 255
 
-    return _vol
+    return X, Y, _vol
 
 def basic_psf(im):
     _im = np.copy(im) # local copy for transforms
@@ -39,11 +42,14 @@ def TPSF_2DFT(vol, fft_axes):
     """ Undersamples every slice (z-axis) using the same pattern"""
     _vol = np.copy(vol)
     W, H, D = _vol.shape
-    _rd_us = np.zeros(H, D)
+    _rd_us = np.zeros((H, D))
     mask = np.random.randint(0,2,size=(H, D)).astype(np.bool)
     _vol_fft = np.fft.fftn(_vol, axes=fft_axes)
     _vol_fft_rd_us = np.copy(_vol_fft)
     _vol_fft_rd_us[:, mask] = _rd_us[mask]
+    _vol_rd_us = np.fft.ifftn(_vol_fft_rd_us, axes=fft_axes)
+
+    return _vol_rd_us
 
 def plot_surface(X, Y, images):
     for i, im in enumerate(images):
@@ -172,7 +178,7 @@ if __name__ == '__main__':
     # wl_name = 'haar'  # TODO: vary type of wavelet #vol_img = sitk.Image(sz,sz,sz,sitk.sitkUInt8)
     # lp_d, hp_d, lp_r, hp_r = map(np.array, pywt.Wavelet(wl_name).filter_bank)
     # #
-    # # number of decomposition levels #
+    # # number of decomposition levels #mask = np.random.randint(0,2,size=(H, D)).astype(np.bool)
     # num_levels = 2  # TODO: vary number of decomposition levels #
     #
     # # apply discrete wavelet tran_fftsform (DWT) #
@@ -189,7 +195,9 @@ if __name__ == '__main__':
     # plot_surface(X, Y, [wavelet_im_rd_us])
     # plt.show()
 
-    # vol = generate_3d_vol(15, 5, 5)
-    # # vol_rd_us = TPSF_2DFT(vol)
-    #
-    # print(vol[:, 5, 5])
+    X, Y, vol = generate_3d_vol(15, 5, 5)
+    vol_rd_us = TPSF_2DFT(vol, (0, 1))
+
+    plot_surface(X, Y, [vol[10, :, :]])
+    plot_surface(X, Y, [vol_rd_us[10, :, :]])
+    plt.show()
