@@ -17,12 +17,12 @@ def generate_2d_image(sz):
     _im[int(sz/2), int(sz/2)] = 255
     return X, Y, _im
 
-def generate_3d_vol(sz, y_loc, z_loc):
+def generate_3d_vol(sz, x_loc, y_loc, z_loc):
     X = np.linspace(-10, 10, sz)
     Y = X
     X,Y = np.meshgrid(X, Y)
     _vol = np.zeros((sz, sz, sz))
-    _vol[:, y_loc, z_loc] = 255
+    _vol[x_loc, y_loc, z_loc] = 255
 
     return X, Y, _vol
 
@@ -195,9 +195,20 @@ if __name__ == '__main__':
     # plot_surface(X, Y, [wavelet_im_rd_us])
     # plt.show()
 
-    X, Y, vol = generate_3d_vol(15, 5, 5)
-    vol_rd_us = TPSF_2DFT(vol, (0, 1))
+    X, Y, vol = generate_3d_vol(32, 16, 16, 16)
+    N = len(vol)
+    vol_wavelet = np.zeros(vol.shape)
 
-    plot_surface(X, Y, [vol[10, :, :]])
-    plot_surface(X, Y, [vol_rd_us[10, :, :]])
+    wl_name = 'haar'  # TODO: vary type of wavelet #vol_img = sitk.Image(sz,sz,sz,sitk.sitkUInt8)
+    lp_d, hp_d, lp_r, hp_r = map(np.array, pywt.Wavelet(wl_name).filter_bank)
+    #
+    # number of decomposition levels #mask = np.random.randint(0,2,size=(H, D)).astype(np.bool)
+    num_levels = 2  # TODO: vary number of decomposition levels #
+
+    for i in range(N):
+        vol_wavelet[:, :, i] = dwt2(vol[:, :, i], lp_d, hp_d, levels=num_levels)
+    # vol_rd_us = TPSF_2DFT(vol, (0, 1))
+    print(np.unravel_index(vol_wavelet.argmax(), vol_wavelet.shape))
+    plot_surface(X, Y, [vol[16, :, :]])
+    plot_surface(X, Y, [vol_wavelet[5, :, :]])
     plt.show()
