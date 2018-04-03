@@ -67,6 +67,20 @@ def TPSF_multi_slice_2DFT(vol, fft_axes):
 
     return _vol_rd_us
 
+def TPSF_3DFT(vol):
+    _vol = np.copy(vol)
+    W, H, D = _vol.shape
+    _rd_us = np.zeros((H, D))
+    _vol_fft = np.fft.fftn(_vol, axes=(0, 1, 2))
+    _vol_fft_rd_us = np.copy(_vol_fft)
+    for i in range(D):
+        mask = np.random.randint(0,2,size=(H, D)).astype(np.bool)
+        _vol_fft_rd_us[i, mask] = _rd_us[mask]
+
+    _vol_rd_us = np.fft.ifftn(_vol_fft_rd_us, axes=(0, 1, 2))
+
+    return _vol_rd_us
+
 def plot_surface(X, Y, images):
     for i, im in enumerate(images):
         fig = plt.figure()
@@ -150,6 +164,8 @@ def idwt2(_dwt2d, _lp, _hp, levels):
     # initialise output image #
     _im = np.zeros_like(_dwt2d)
 
+
+
     # ###
     # 1st STAGE: convolution along 2nd AXIS (revert steps of forward transform) #
     # ###
@@ -187,13 +203,14 @@ def idwt2(_dwt2d, _lp, _hp, levels):
     return _im
 
 if __name__ == '__main__':
+
+    """2D undersampling"""
     # X, Y, im = generate_2d_image(64)
     # wavelet_im = np.zeros(im.shape)
     # plot_surface(X, Y, [im])
     #
     # wl_name = 'haar'  # TODO: vary type of wavelet #vol_img = sitk.Image(sz,sz,sz,sitk.sitkUInt8)
     # lp_d, hp_d, lp_r, hp_r = map(np.array, pywt.Wavelet(wl_name).filter_bank)
-    # #
     # # number of decomposition levels #mask = np.random.randint(0,2,size=(H, D)).astype(np.bool)
     # num_levels = 2  # TODO: vary number of decomposition levels #
     #
@@ -211,7 +228,9 @@ if __name__ == '__main__':
     # plot_surface(X, Y, [wavelet_im_rd_us])
     # plt.show()
 
+    """Volumetric undersampling"""
     X, Y, vol = generate_3d_vol(32, 16, 16, 16)
+    plot_surface(X, Y, [vol[16, :, :]])
     N = len(vol)
 
     (M, N, D) = vol.shape
@@ -225,12 +244,32 @@ if __name__ == '__main__':
     num_levels = 2  # TODO: vary number of decomposition levels #
     dwt = dwt2(vol[16, :, :], lp_d, hp_d, levels=num_levels)
     wavelet_slice[M2:, N2:] = dwt[M2:, N2:]
-    vol[16, :, :] = wavelet_slice
-    vol_rd_us_1D = TPSF_2DFT(vol, (0,1))
-    vol_rd_us_multi = TPSF_multi_slice_2DFT(vol, (0, 1))
-    # print(np.unravel_index(vol_wavelet.argmax(), vol_wavelet.shape))
-    print(np.unravel_index(vol_rd_us_multi.argmax(), vol_rd_us_multi.shape))
+    im_slice = idwt2(wavelet_slice, lp_r, hp_r, levels=num_levels)
+    vol[16, :, :] = im_slice
     plot_surface(X, Y, [vol[16, :, :]])
-    plot_surface(X, Y, [vol_rd_us_1D[16, :, :]])
-    plot_surface(X, Y, [vol_rd_us_multi[16, :, :]])
+
+    """Single-slice undersampling 2DFT"""
+    # vol_rd_us_1D_im = TPSF_2DFT(vol, (0,1))
+    # plot_surface(X, Y, [vol_rd_us_1D_im[16, :, :]])
+    # vol_rd_us_1d_wave = np.zeros(vol_rd_us_1D_im.shape)
+    # for i in range(M):
+    #     vol_rd_us_1d_wave[i, :, :] = dwt2(np.real(vol_rd_us_1D_im[i, :, :]), lp_r, hp_r, levels=num_levels)
+    # plot_surface(X, Y, [vol_rd_us_1d_wave[16, :, :]])
+
+    """Multi-slice undersampling 2DFT"""
+    # vol_rd_us_multi_im = TPSF_multi_slice_2DFT(vol, (0, 1))
+    # plot_surface(X, Y, [vol_rd_us_multi_im[16, :, :]])
+    # vol_rd_us_multi_wave = np.zeros(vol_rd_us_multi_im.shape)
+    # for i in range(M):
+    #     vol_rd_us_multi_wave[i, :, :] = dwt2(np.real(vol_rd_us_multi_im[i, :, :]), lp_r, hp_r, levels=num_levels)
+    # plot_surface(X, Y, [vol_rd_us_multi_wave[16, :, :]])
+
+    """3DFT"""
+    vol_rd_us_3D_im = TPSF_3DFT(vol)
+    plot_surface(X, Y, [vol_rd_us_3D_im[16, :, :]])
+    vol_rd_us_3D_wave = np.zeros(vol_rd_us_3D_im.shape)
+    for i in range(M):
+        vol_rd_us_3D_wave[i, :, :] = dwt2(np.real(vol_rd_us_3D_im[i, :, :]), lp_r, hp_r, levels=num_levels)
+    plot_surface(X, Y, [vol_rd_us_3D_wave[16, :, :]])
+
     plt.show()
