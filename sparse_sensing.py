@@ -18,7 +18,7 @@ def generate_2d_image(sz):
     return X, Y, _im
 
 def generate_3d_vol(sz, x_loc, y_loc, z_loc):
-    X = np.linspace(-10, 10, sz)
+    X = np.linspace(-50, 50, sz)
     Y = X
     X,Y = np.meshgrid(X, Y)
     _vol = np.zeros((sz, sz, sz))
@@ -229,24 +229,25 @@ if __name__ == '__main__':
     # plt.show()
 
     """Volumetric undersampling"""
-    X, Y, vol = generate_3d_vol(32, 16, 16, 16)
-    plot_surface(X, Y, [vol[16, :, :]])
+    slice_loc = 128
+    X, Y, vol = generate_3d_vol(256, slice_loc, slice_loc, slice_loc)
+    plot_surface(X, Y, [vol[slice_loc, :, :]])
     N = len(vol)
 
     (M, N, D) = vol.shape
 
     wavelet_slice = np.zeros((M, N))
     (M2, N2) = map(lambda x: int(np.ceil(x/2)), (M, N))
-    wl_name = 'haar'  # TODO: vary type of wavelet #vol_img = sitk.Image(sz,sz,sz,sitk.sitkUInt8)
+    wl_name = 'haar'  # TODO: vary type of wavelet
     lp_d, hp_d, lp_r, hp_r = map(np.array, pywt.Wavelet(wl_name).filter_bank)
     #
-    # number of decomposition levels #mask = np.random.randint(0,2,size=(H, D)).astype(np.bool)
+    # number of decomposition levels
     num_levels = 2  # TODO: vary number of decomposition levels #
-    dwt = dwt2(vol[16, :, :], lp_d, hp_d, levels=num_levels)
+    dwt = dwt2(vol[slice_loc, :, :], lp_d, hp_d, levels=num_levels)
     wavelet_slice[M2:, N2:] = dwt[M2:, N2:]
     im_slice = idwt2(wavelet_slice, lp_r, hp_r, levels=num_levels)
-    vol[16, :, :] = im_slice
-    plot_surface(X, Y, [vol[16, :, :]])
+    vol[slice_loc, :, :] = im_slice
+    plot_surface(X, Y, [vol[slice_loc, :, :]])
 
     """Single-slice undersampling 2DFT"""
     # vol_rd_us_1D_im = TPSF_2DFT(vol, (0,1))
@@ -266,10 +267,10 @@ if __name__ == '__main__':
 
     """3DFT"""
     vol_rd_us_3D_im = TPSF_3DFT(vol)
-    plot_surface(X, Y, [vol_rd_us_3D_im[16, :, :]])
+    plot_surface(X, Y, [vol_rd_us_3D_im[slice_loc, :, :]])
     vol_rd_us_3D_wave = np.zeros(vol_rd_us_3D_im.shape)
     for i in range(M):
         vol_rd_us_3D_wave[i, :, :] = dwt2(np.real(vol_rd_us_3D_im[i, :, :]), lp_r, hp_r, levels=num_levels)
-    plot_surface(X, Y, [vol_rd_us_3D_wave[16, :, :]])
+    plot_surface(X, Y, [vol_rd_us_3D_wave[slice_loc, :, :]])
 
     plt.show()
