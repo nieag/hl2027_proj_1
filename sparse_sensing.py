@@ -51,6 +51,18 @@ def TPSF_2DFT(vol, fft_axes):
 
     return _vol_rd_us
 
+def TPSF_multi_slice_2DFT(vol, fft_axes):
+    _vol = np.copy(vol)
+    W, H, D = _vol.shape
+    _rd_us = np.zeros((H, D))
+    _vol_fft = np.fft.fftn(_vol, axes=fft_axes)
+    _vol_fft_rd_us = np.copy(_vol_fft)
+    for i in range(D):
+
+        mask = np.random.randint(0,2,size=(H, D)).astype(np.bool)
+        _vol_fft_rd_us[:, mask] = _rd_us[mask]
+    _vol_rd_us = np.fft.ifftn(_vol_fft_rd_us, axes=fft_axes)
+
 def plot_surface(X, Y, images):
     for i, im in enumerate(images):
         fig = plt.figure()
@@ -197,18 +209,24 @@ if __name__ == '__main__':
 
     X, Y, vol = generate_3d_vol(32, 16, 16, 16)
     N = len(vol)
-    vol_wavelet = np.zeros(vol.shape)
 
+    (M, N, D) = vol.shape
+
+    wavelet_slice = np.zeros((M, N))
+    (M2, N2) = map(lambda x: int(np.ceil(x/2)), (M, N))
     wl_name = 'haar'  # TODO: vary type of wavelet #vol_img = sitk.Image(sz,sz,sz,sitk.sitkUInt8)
     lp_d, hp_d, lp_r, hp_r = map(np.array, pywt.Wavelet(wl_name).filter_bank)
     #
     # number of decomposition levels #mask = np.random.randint(0,2,size=(H, D)).astype(np.bool)
     num_levels = 2  # TODO: vary number of decomposition levels #
-
-    for i in range(N):
-        vol_wavelet[:, :, i] = dwt2(vol[:, :, i], lp_d, hp_d, levels=num_levels)
-    # vol_rd_us = TPSF_2DFT(vol, (0, 1))
-    print(np.unravel_index(vol_wavelet.argmax(), vol_wavelet.shape))
+    print(np.max(vol[16, :, :]))
+    dwt = dwt2(vol[16, :, :], lp_d, hp_d, levels=num_levels)
+    wavelet_slice[M2:, N2:] = dwt[M2:, N2:]
+    vol[16, :, :] = wavelet_slice
+    print(np.max(vol[16, :, :]))
+    vol_rd_us = TPSF_2DFT(vol, (0, 1))
+    # print(np.unravel_index(vol_wavelet.argmax(), vol_wavelet.shape))
+    # print(np.unravel_index(vol_rd_us.argmax(), vol_rd_us.shape))
     plot_surface(X, Y, [vol[16, :, :]])
-    plot_surface(X, Y, [vol_wavelet[5, :, :]])
+    plot_surface(X, Y, [vol_rd_us[16, :, :]])
     plt.show()
