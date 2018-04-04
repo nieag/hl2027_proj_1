@@ -29,12 +29,10 @@ def linear_recon(image, mask, pdf):
 
     return _im_us
 
-def POCS_algorithm(image, mask, pdf, thresh, filter_type="Haar", n_iter=15):
+def POCS_algorithm(image, mask, pdf, thresh, filter_type="db1", n_iter=15):
     _im = np.copy(image)
-    _DATA = np.multiply(np.fft.fft2(_im), mask)
+    _DATA = np.multiply(np.fft.fft2(np.fft.ifftshift(_im)), mask)
     _DATA = np.fft.fftshift(_DATA)
-    plt.figure()
-    plt.imshow(np.abs(_DATA), cmap='gray')
     _im_cs = np.fft.ifft2(np.divide(_DATA, pdf))
     lp_d, hp_d, lp_r, hp_r = map(np.array, pywt.Wavelet(filter_type).filter_bank)
 
@@ -45,10 +43,14 @@ def POCS_algorithm(image, mask, pdf, thresh, filter_type="Haar", n_iter=15):
         _im_cs = idwt2(_im_cs, lp_r, hp_r, levels=1)
         _im_cs = np.fft.ifft2(np.multiply(np.fft.fftshift(np.fft.fft2(_im_cs)), 1-mask) + _DATA)
         plt.imshow(np.abs(_im_cs), cmap='gray')
+        plt.title("Iteration: {}".format(i))
         plt.pause(0.5)
 
 def new_soft_thresh(_im, _thresh):
-    y = (abs(x) > lambda).*(x.*(abs(x)-lambda)./(abs(x)+eps));
+    # y = (abs(x) > lambda).*(x.*(abs(x)-lambda)./(abs(x)+eps));
+    _left_side = np.abs(_im) > _thresh
+    _right_side = np.divide(np.multiply(_im, np.abs(_im)-_thresh), np.abs(_im) + np.finfo(float).eps)
+    _y = np.multiply(_left_side, _right_side)
     return _y
 
 def soft_thresh(_im, _thresh):
@@ -186,7 +188,7 @@ if __name__ == '__main__':
     im_us = linear_recon(im, mask_unif, pdf_vardens)
     # _DATA = np.multiply(np.fft.fft2(im), mask_vardens)
     # plt.imshow(np.abs(_DATA), cmap="gray")
-    # POCS_algorithm(im, mask_vardens, pdf_vardens, 0.025)
-    test = new_soft_thresh(im, 0.025)
+    POCS_algorithm(im, mask_vardens, pdf_vardens, 0.025)
+    # test = new_soft_thresh(im, 0.025)
     # plt.imshow(np.abs(im_us), cmap='gray')
     plt.show()
