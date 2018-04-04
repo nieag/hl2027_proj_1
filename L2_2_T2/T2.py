@@ -232,45 +232,6 @@ def idwt2(_dwt2d, _lp, _hp, levels):
     _im += convolve(_tmp_h, _hp)  # revert HIGH pass #  # TODO: perform high pass filtering (1st axis) #
 
     return _im
-    # initialise output image #
-    _im = np.zeros_like(_dwt2d)
-
-    # ###
-    # 1st STAGE: convolution along 2nd AXIS (revert steps of forward transform) #
-    # ###
-
-    # initialise temporary reconstruction arrays #
-    _tmp_l = np.zeros_like(_dwt2d)
-    _tmp_ll, _tmp_lh = np.zeros((M2, N)), np.zeros((M//2, N))
-
-    # ZERO FILLING of LL and LH #
-    _tmp_ll[:, 1::2] = _dwt2d[:M2, :N2]  # LL aka 'top left' #
-    _tmp_lh[:, 1::2] = _dwt2d[:M2, N2:]  # LH aka 'top right' #
-
-    # CONVOLUTION and summation #
-    _tmp_l[1::2, :] = convolve(_tmp_ll, _lp.transpose())  # revert LOW pass #
-    _tmp_l[1::2, :] += convolve(_tmp_lh, _hp.transpose())  # revert HIGH pass #  # TODO: perform high pass filtering (2nd axis) #
-
-    # initialise temporary reconstruction arrays #
-    _tmp_h = np.zeros_like(_dwt2d)
-    _tmp_hl, _tmp_hh = np.zeros((M2, N)), np.zeros((M2, N))
-
-    # ZERO FILLING of HL and HH #
-    _tmp_hl[:, 1::2] = _dwt2d[M2:, :N2]  # HL aka 'bottom left' #
-    _tmp_hh[:, 1::2] = _dwt2d[M2:, N2:]  # HH aka 'bottom right' #
-
-    # CONVOLUTION and summation #
-    _tmp_h[1::2, :] = convolve(_tmp_hl, _lp.transpose())  # revert LOW pass #  # TODO: perform low pass filtering (2nd axis) #
-    _tmp_h[1::2, :] += convolve(_tmp_hh, _hp.transpose())  # revert HIGH pass #  # TODO: perform high pass filtering (2nd axis) #
-
-    # ###
-    # 2nd STAGE: convolution along 1st AXIS (revert steps of forward transform) #
-    # ###
-    _im += convolve(_tmp_l, _lp)  # revert LOW pass #  # TODO: perform low pass filtering (1st axis) #
-    _im += convolve(_tmp_h, _hp)  # revert HIGH pass #  # TODO: perform high pass filtering (1st axis) #
-
-    return _im
-
 
 def soft_thresh(_im, _thresh):
     """

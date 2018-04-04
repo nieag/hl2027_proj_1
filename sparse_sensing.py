@@ -18,7 +18,7 @@ def generate_2d_image(sz):
     return X, Y, _im
 
 def generate_3d_vol(sz, x_loc, y_loc, z_loc):
-    X = np.linspace(-50, 50, sz)
+    X = np.linspace(-10, 10, sz)
     Y = X
     X,Y = np.meshgrid(X, Y)
     _vol = np.zeros((sz, sz, sz))
@@ -229,8 +229,8 @@ if __name__ == '__main__':
     # plt.show()
 
     """Volumetric undersampling"""
-    slice_loc = 128
-    X, Y, vol = generate_3d_vol(256, slice_loc, slice_loc, slice_loc)
+    slice_loc = 32
+    X, Y, vol = generate_3d_vol(64, slice_loc, slice_loc, slice_loc)
     plot_surface(X, Y, [vol[slice_loc, :, :]])
     N = len(vol)
 
@@ -250,27 +250,27 @@ if __name__ == '__main__':
     plot_surface(X, Y, [vol[slice_loc, :, :]])
 
     """Single-slice undersampling 2DFT"""
-    # vol_rd_us_1D_im = TPSF_2DFT(vol, (0,1))
-    # plot_surface(X, Y, [vol_rd_us_1D_im[16, :, :]])
-    # vol_rd_us_1d_wave = np.zeros(vol_rd_us_1D_im.shape)
-    # for i in range(M):
-    #     vol_rd_us_1d_wave[i, :, :] = dwt2(np.real(vol_rd_us_1D_im[i, :, :]), lp_r, hp_r, levels=num_levels)
-    # plot_surface(X, Y, [vol_rd_us_1d_wave[16, :, :]])
+    vol_rd_us_1D_im = TPSF_2DFT(vol, (0,1))
+    plot_surface(X, Y, [vol_rd_us_1D_im[slice_loc, :, :]])
+    vol_rd_us_1d_wave = np.zeros(vol_rd_us_1D_im.shape)
+    for i in range(M):
+        vol_rd_us_1d_wave[i, :, :] = dwt2(np.real(vol_rd_us_1D_im[i, :, :]), lp_r, hp_r, levels=num_levels)
+    plot_surface(X, Y, [vol_rd_us_1d_wave[slice_loc, :, :]])
 
     """Multi-slice undersampling 2DFT"""
     # vol_rd_us_multi_im = TPSF_multi_slice_2DFT(vol, (0, 1))
-    # plot_surface(X, Y, [vol_rd_us_multi_im[16, :, :]])
+    # plot_surface(X, Y, [vol_rd_us_multi_im[slice_loc, :, :]])
     # vol_rd_us_multi_wave = np.zeros(vol_rd_us_multi_im.shape)
     # for i in range(M):
     #     vol_rd_us_multi_wave[i, :, :] = dwt2(np.real(vol_rd_us_multi_im[i, :, :]), lp_r, hp_r, levels=num_levels)
-    # plot_surface(X, Y, [vol_rd_us_multi_wave[16, :, :]])
+    # plot_surface(X, Y, [vol_rd_us_multi_wave[slice_loc, :, :]])
 
     """3DFT"""
-    vol_rd_us_3D_im = TPSF_3DFT(vol)
-    plot_surface(X, Y, [vol_rd_us_3D_im[slice_loc, :, :]])
-    vol_rd_us_3D_wave = np.zeros(vol_rd_us_3D_im.shape)
-    for i in range(M):
-        vol_rd_us_3D_wave[i, :, :] = dwt2(np.real(vol_rd_us_3D_im[i, :, :]), lp_r, hp_r, levels=num_levels)
-    plot_surface(X, Y, [vol_rd_us_3D_wave[slice_loc, :, :]])
+    # vol_rd_us_3D_im = TPSF_3DFT(vol)
+    # plot_surface(X, Y, [vol_rd_us_3D_im[slice_loc, :, :]])
+    # vol_rd_us_3D_wave = np.zeros(vol_rd_us_3D_im.shape)
+    # for i in range(M):
+    #     vol_rd_us_3D_wave[i, :, :] = dwt2(np.real(vol_rd_us_3D_im[i, :, :]), lp_r, hp_r, levels=num_levels)
+    # plot_surface(X, Y, [vol_rd_us_3D_wave[slice_loc, :, :]])
 
     plt.show()
