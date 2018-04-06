@@ -31,7 +31,7 @@ def linear_recon(image, mask, pdf):
 
 def POCS_algorithm(image, mask, pdf, thresh, filter_type="db1", n_iter=15):
     _im = np.copy(image)
-    _DATA = np.multiply(np.fft.fft2(np.fft.ifftshift(_im)), mask)
+    _DATA = np.multiply(np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(_im))), mask)
     _DATA = np.fft.fftshift(_DATA)
     _im_cs = np.fft.ifft2(np.divide(_DATA, pdf))
     lp_d, hp_d, lp_r, hp_r = map(np.array, pywt.Wavelet(filter_type).filter_bank)
@@ -41,10 +41,22 @@ def POCS_algorithm(image, mask, pdf, thresh, filter_type="db1", n_iter=15):
         _im_cs = dwt2(np.abs(_im_cs), lp_d, hp_d, levels=1)
         _im_cs = new_soft_thresh(_im_cs, thresh)
         _im_cs = idwt2(_im_cs, lp_r, hp_r, levels=1)
-        _im_cs = np.fft.ifft2(np.multiply(np.fft.fftshift(np.fft.fft2(_im_cs)), 1-mask) + _DATA)
+        _im_cs = np.fft.fftshift(np.fft.ifft2(np.fft.ifftshift(np.multiply(np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(_im_cs))), 1-mask) + _DATA)))
         plt.imshow(np.abs(_im_cs), cmap='gray')
         plt.title("Iteration: {}".format(i))
         plt.pause(0.5)
+
+    # Plot for comparison
+    plt.figure()
+    plt.subplot(1, 3, 1)
+    plt.imshow(np.abs(image), cmap='gray')
+    plt.title("image")
+    plt.subplot(1, 3, 2)
+    plt.imshow(np.abs(linear_recon(image, mask, pdf)), cmap='gray')
+    plt.title("im_us")
+    plt.subplot(1, 3, 3)
+    plt.imshow(np.abs(_im_cs), cmap='gray')
+    plt.title("im_cs")
 
 def new_soft_thresh(_im, _thresh):
     # y = (abs(x) > lambda).*(x.*(abs(x)-lambda)./(abs(x)+eps));
@@ -186,6 +198,7 @@ def idwt2(_dwt2d, _lp, _hp, levels):
 if __name__ == '__main__':
     im, mask_unif, mask_vardens, pdf_unif, pdf_vardens = read_data('./workshop/brain.mat')
     im_us = linear_recon(im, mask_unif, pdf_vardens)
+
     # _DATA = np.multiply(np.fft.fft2(im), mask_vardens)
     # plt.imshow(np.abs(_DATA), cmap="gray")
     POCS_algorithm(im, mask_vardens, pdf_vardens, 0.025)
