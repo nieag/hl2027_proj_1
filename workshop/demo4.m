@@ -25,6 +25,7 @@ disp('Please hit any key to continue')
 
 DATA = fft2c(im).*mask_vardens;
 figure; imshow(abs(DATA))
+size(im, 3)
 im_cs = ifft2c(DATA./pdf_vardens); % initial value
 figure;
 for iter=1:15

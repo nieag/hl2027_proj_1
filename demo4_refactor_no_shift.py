@@ -1,5 +1,6 @@
 import skimage
 import numpy as np
+from numpy.fft import *
 import matplotlib.pyplot as plt
 import os
 import scipy.io as spio
@@ -22,26 +23,46 @@ def read_data(path):
 
 def linear_recon(image, mask, pdf):
     _im = np.copy(image)
-    _im_fft = np.fft.fft2(_im)
-    _im_fft = np.fft.fftshift(_im_fft)
+    _im_fft = fftshift(fft2(_im))
     _im_fft_us = np.divide(np.multiply(_im_fft, mask), pdf)
-    _im_us = np.fft.ifft2(_im_fft_us)
+    _im_us = ifft2(_im_fft_us)
 
     return _im_us
 
+def fft2c(image):
+    """
+    Apply 2d fourier transform to image
+
+    """
+    _im = np.copy(image)
+    _im_freq = fftshift(fft2(ifftshift(_im)))
+
+    return _im_freq
+
+
+def ifft2c(image):
+    """
+    Apply inverse 2d fourier transform to image
+
+    """
+    _im = np.copy(image)
+    _im_freq = fftshift(ifft2(ifftshift(_im)))
+
+    return _im_freq
+
 def POCS_algorithm(image, mask, pdf, thresh, filter_type="db1", n_iter=15):
     _im = np.copy(image)
-    _DATA = np.multiply(np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(_im))), mask)
-    _DATA = np.fft.fftshift(_DATA)
+    _DATA = np.multiply(fft2c(_im), mask)
+    _DATA = np.fft.fftshift(_DATA) # Why is this line necessary?
     _im_cs = np.fft.ifft2(np.divide(_DATA, pdf))
     lp_d, hp_d, lp_r, hp_r = map(np.array, pywt.Wavelet(filter_type).filter_bank)
 
     plt.figure()
     for i in range(n_iter):
-        _im_cs = dwt2(np.abs(_im_cs), lp_d, hp_d, levels=1)
-        _im_cs = new_soft_thresh(_im_cs, thresh)
-        _im_cs = idwt2(_im_cs, lp_r, hp_r, levels=1)
-        _im_cs = np.fft.fftshift(np.fft.ifft2(np.fft.ifftshift(np.multiply(np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(_im_cs))), 1-mask) + _DATA)))
+        _im_cs = dwt2(np.abs(_im_cs), lp_d, hp_d, levels=1) # Apply wavelet transform
+        _im_cs = new_soft_thresh(_im_cs, thresh) # Soft thresholding on the wavelet transform to retrieve high frequency content
+        _im_cs = idwt2(_im_cs, lp_r, hp_r, levels=1) # Inverse wavelet transform using compressed version
+        _im_cs = ifft2c(np.multiply(fft2c(_im_cs), 1 - mask) + _DATA) # Undersample the fourier spectra of the compressed version of _im_cs, add base _DATA
         plt.imshow(np.abs(_im_cs), cmap='gray')
         plt.title("Iteration: {}".format(i))
         plt.pause(0.5)
