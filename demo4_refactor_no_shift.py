@@ -50,11 +50,34 @@ def ifft2c(image):
 
     return _im_freq
 
+def generate_mask(im, type):
+    '''
+    Generate binary mask according to type
+    # TODO: Add more patterns
+    '''
+
+    h, w = im.shape
+    if type == 'uniform':
+        return np.random.choice([0, 1], [h, w], p = [0.7, 0.3])
+    elif type == 'ylines':
+        _rows = np.random.randint(0, h, [1, 50])
+        _mask = np.zeros(im.shape)
+        _mask[_rows, :] = 1
+        return _mask
+    elif type == 'xlines':
+        _columns = np.random.randint(0, w, [1, 50])
+        _mask = np.zeros(im.shape)
+        _mask[:, _columns] = 1
+        return _mask
+
+
+
 def POCS_algorithm(image, mask, pdf, thresh, filter_type="db1", n_iter=15):
     _im = np.copy(image)
     _DATA = np.multiply(fft2c(_im), mask)
     _DATA = np.fft.fftshift(_DATA) # Why is this line necessary?
-    _im_cs = np.fft.ifft2(np.divide(_DATA, pdf))
+    #_im_cs = np.fft.ifft2(np.divide(_DATA, pdf))
+    _im_cs = _im
     lp_d, hp_d, lp_r, hp_r = map(np.array, pywt.Wavelet(filter_type).filter_bank)
 
     plt.figure()
@@ -66,9 +89,10 @@ def POCS_algorithm(image, mask, pdf, thresh, filter_type="db1", n_iter=15):
         plt.imshow(np.abs(_im_cs), cmap='gray')
         plt.title("Iteration: {}".format(i))
         plt.pause(0.5)
+        plt.show()
 
     # Plot for comparison
-    plt.figure(figsize = (30, 10))
+    plt.figure(figsize = (10, 10))
     plt.subplot(1, 3, 1)
     plt.imshow(np.abs(image), cmap='gray')
     plt.title("image")
@@ -222,7 +246,10 @@ if __name__ == '__main__':
 
     # _DATA = np.multiply(np.fft.fft2(im), mask_vardens)
     # plt.imshow(np.abs(_DATA), cmap="gray")
-    POCS_algorithm(im, mask_vardens, pdf_vardens, 0.025)
+    #POCS_algorithm(im, mask_vardens, pdf_vardens, 0.025)
     # test = new_soft_thresh(im, 0.025)
     # plt.imshow(np.abs(im_us), cmap='gray')
-    plt.show()
+
+    mask = generate_mask(im, 'xlines')
+
+    POCS_algorithm(im, mask, pdf_vardens, 0.025)
