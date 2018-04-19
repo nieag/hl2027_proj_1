@@ -6,6 +6,7 @@ import os
 import scipy.io as spio
 import pywt
 from scipy.ndimage.filters import convolve
+from scipy.ndimage.interpolation import rotate
 import SimpleITK as sitk
 from skimage.transform import resize
 from scipy.stats.distributions import norm
@@ -39,7 +40,6 @@ def fft2c(image):
 
     return _im_freq
 
-
 def ifft2c(image):
     """
     Apply inverse 2d fourier transform to image
@@ -69,14 +69,21 @@ def generate_mask(im, type):
         _mask = np.zeros(im.shape)
         _mask[:, _columns] = 1
         return _mask
-
-
+    elif type == 'fakeradials':
+        _mask = np.zeros([h, w])
+        _mask[int(h/2 - 3):int(h/2 + 3), 50:w-50] = 1
+        _mask[50:h-50, int(w/2 - 3):int(w/2 + 3)] = 1
+        for i in range(1, 6):
+            _rot = rotate(_mask, 20 + i*10, reshape=False)
+            _mask = _mask + _rot
+        _mask[np.where(_mask > 0.5)] = 1
+        return _mask
 
 def POCS_algorithm(image, mask, pdf, thresh, filter_type="db1", n_iter=15):
     _im = np.copy(image)
     _DATA = np.multiply(fft2c(_im), mask)
     _DATA = np.fft.fftshift(_DATA) # Why is this line necessary?
-    #_im_cs = np.fft.ifft2(np.divide(_DATA, pdf))
+    _im_cs = np.fft.ifft2(np.divide(_DATA, pdf))
     _im_cs = _im
     lp_d, hp_d, lp_r, hp_r = map(np.array, pywt.Wavelet(filter_type).filter_bank)
 
@@ -109,6 +116,13 @@ def new_soft_thresh(_im, _thresh):
     _right_side = np.divide(np.multiply(_im, np.abs(_im)-_thresh), np.abs(_im) + np.finfo(float).eps)
     _y = np.multiply(_left_side, _right_side)
     return _y
+
+def hard_thresh(_im, _thresh):
+    '''
+    # TODO: Fix return type
+
+    '''
+    return np.abs(_im) > _thresh
 
 def soft_thresh(_im, _thresh):
     """
@@ -246,10 +260,12 @@ if __name__ == '__main__':
 
     # _DATA = np.multiply(np.fft.fft2(im), mask_vardens)
     # plt.imshow(np.abs(_DATA), cmap="gray")
-    #POCS_algorithm(im, mask_vardens, pdf_vardens, 0.025)
+    #POCS_algorithm(im, mask_unif, pdf_unif, 0.025)
     # test = new_soft_thresh(im, 0.025)
     # plt.imshow(np.abs(im_us), cmap='gray')
 
-    mask = generate_mask(im, 'xlines')
-
+    mask = generate_mask(im, 'fakeradials')
     POCS_algorithm(im, mask, pdf_vardens, 0.025)
+    plt.figure()
+    plt.imshow(np.abs(mask), cmap='gray')
+    plt.show()
