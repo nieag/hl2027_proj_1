@@ -96,7 +96,7 @@ def POCS_algorithm(image, mask, pdf, thresh, filter_type="db1", n_iter=15):
         plt.imshow(np.abs(_im_cs), cmap='gray')
         plt.title("Iteration: {}".format(i))
         plt.pause(0.5)
-        plt.show()
+        #plt.show()
 
     # Plot for comparison
     plt.figure(figsize = (10, 10))
@@ -264,8 +264,8 @@ if __name__ == '__main__':
     # test = new_soft_thresh(im, 0.025)
     # plt.imshow(np.abs(im_us), cmap='gray')
 
-    mask = generate_mask(im, 'fakeradials')
-    POCS_algorithm(im, mask, pdf_vardens, 0.025)
+    mask = generate_mask(im, 'xlines')
+    POCS_algorithm(im, mask, pdf_unif, 0.025)
     plt.figure()
     plt.imshow(np.abs(mask), cmap='gray')
     plt.show()

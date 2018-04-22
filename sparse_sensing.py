@@ -10,6 +10,12 @@ from mpl_toolkits.mplot3d import Axes3D
 
 
 def generate_2d_image(sz):
+    """
+    Generates a square, sparse 2D image of size 'sz'.
+    Input: sz, image size.
+    Output: X, Y,  meshgrid for 3D plot
+            _im, 2D array of the sparse image
+    """
     X = np.linspace(-10, 10, sz)
     Y = X
     X,Y = np.meshgrid(X, Y)
@@ -18,6 +24,14 @@ def generate_2d_image(sz):
     return X, Y, _im
 
 def generate_3d_vol(sz, x_loc, y_loc, z_loc):
+    """
+    Generates a 3D volume of size sz and places a non-zeror voxel at x_loc,
+    y_loc, z_loc.
+    Input: sz, image size
+           x_loc, y_loc, z_loc, coordinates for non-zero voxel.
+    Output: X, Y, meshgrid for 3D plot.
+            _vol, 3D array of the spasre volume.
+    """
     X = np.linspace(-10, 10, sz)
     Y = X
     X,Y = np.meshgrid(X, Y)
@@ -27,6 +41,13 @@ def generate_3d_vol(sz, x_loc, y_loc, z_loc):
     return X, Y, _vol
 
 def basic_psf(im):
+    """
+    Basic PSF algorithm without wavelet transform for the 2D case.
+    Input: im, image to be undersampled.
+    Output: _im_fft, fourier transform of the image.
+            _im_fft_rd_us, undersampled fourier transform of the image.
+            _im_rd_us, reconstructed undersampled image.
+    """
     _im = np.copy(im) # local copy for transforms
     _im_fft = np.fft.fft2(_im)
     _rd_us = np.zeros(_im.shape)
@@ -38,8 +59,14 @@ def basic_psf(im):
     _im_rd_us = np.fft.ifft2(_im_fft_rd_us)
     return _im_fft, _im_fft_rd_us, _im_rd_us
 
-def TPSF_2DFT(vol, fft_axes):
-    """ Undersamples every slice using the same pattern"""
+def PSF_2DFT(vol, fft_axes):
+    """
+    Volumetric PSF algorithm, 2D fourier transform along specified axes.
+    Static undersampling pattern for each slice.
+    Input: vol, image volume to be undersampled.
+           fft_axes, specification of axes to perform FFT along.
+    Output: _vol_rd_us, reconstructed undersampled image volume.
+    """
     _vol = np.copy(vol)
     W, H, D = _vol.shape
     _rd_us = np.zeros((H, D))
@@ -52,8 +79,14 @@ def TPSF_2DFT(vol, fft_axes):
 
     return _vol_rd_us
 
-def TPSF_multi_slice_2DFT(vol, fft_axes):
-    """Undersamples every slice using a different pattern"""
+def PSF_multi_slice_2DFT(vol, fft_axes):
+    """
+    Multi-slice volumetric PSF algorithm, 2D fourier transform along specified axes.
+    Undersampling is performed randomly for each slice.
+    Input: vol, image volume to be undersampled.
+           fft_axes, specification of axes to perform FFT along.
+    Output: _vol_rd_us, reconstructed undersampled image volume.
+    """
     _vol = np.copy(vol)
     W, H, D = _vol.shape
     _rd_us = np.zeros((H, D))
@@ -66,6 +99,12 @@ def TPSF_multi_slice_2DFT(vol, fft_axes):
     return _vol_rd_us
 
 def TPSF_3DFT(vol):
+    """
+    Multi-slice volumetric PSF algorithm, 3D fourier transform.
+    Undersampling is performed randomly for each slice.
+    Input: vol, image volume to be undersampled.
+    Output: _vol_rd_us, reconstructed undersampled image volume.
+    """
     _vol = np.copy(vol)
     W, H, D = _vol.shape
     _rd_us = np.zeros((H, D))
@@ -82,6 +121,11 @@ def TPSF_3DFT(vol):
     return _vol_rd_us
 
 def plot_surface(X, Y, images):
+    """
+    Function for visualising a 3D plot of a chosen image slice.
+    Input: X, Y, meshgrid for defining the space to plot.
+           images, array of images to be visualised.
+    """
     for i, im in enumerate(images):
         fig = plt.figure()
         ax = fig.gca(projection='3d')

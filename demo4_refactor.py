@@ -199,6 +199,7 @@ if __name__ == '__main__':
     im, mask_unif, mask_vardens, pdf_unif, pdf_vardens = read_data('./workshop/brain.mat')
     im_us = linear_recon(im, mask_unif, pdf_vardens)
 
+
     # _DATA = np.multiply(np.fft.fft2(im), mask_vardens)
     # plt.imshow(np.abs(_DATA), cmap="gray")
     POCS_algorithm(im, mask_vardens, pdf_vardens, 0.025)
