@@ -70,7 +70,8 @@ def PSF_2DFT(vol, fft_axes):
     _vol = np.copy(vol)
     W, H, D = _vol.shape
     _rd_us = np.zeros((H, D))
-    mask_slice = np.random.randint(0,2,size=(H, 1)).astype(np.bool)
+    # mask_slice = np.random.randint(0,2,size=(H, 1)).astype(np.bool)
+    mask_slice = np.random.choice([0,1], size=(H,1), p=[0.7, 0.3]).astype(np.bool)
     mask = np.tile(mask_slice,(1,D))
     _vol_fft = np.fft.fftn(_vol, axes=fft_axes)
     _vol_fft_rd_us = np.copy(_vol_fft)
@@ -92,7 +93,7 @@ def PSF_multi_slice_2DFT(vol, fft_axes):
     _rd_us = np.zeros((H, D))
     _vol_fft = np.fft.fftn(_vol, axes=fft_axes)
     _vol_fft_rd_us = np.copy(_vol_fft)
-    mask = np.random.randint(0,2,size=(H, D)).astype(np.bool)
+    mask = np.random.choice([0,1], size=(H,D), p=[0.7, 0.3]).astype(np.bool)
     _vol_fft_rd_us[:, mask] = _rd_us[mask]
     _vol_rd_us = np.fft.ifftn(_vol_fft_rd_us, axes=fft_axes)
 
@@ -129,6 +130,15 @@ def plot_surface(X, Y, images):
     for i, im in enumerate(images):
         fig = plt.figure()
         ax = fig.gca(projection='3d')
+        ax.view_init(35, -135)
+        surf = ax.plot_surface(X, Y, im, color='r')
+
+def subplot_surfaces(X, Y, images):
+    fig = plt.figure()
+    n = len(images)
+    for i, im in enumerate(images):
+        ax = fig.add_subplot(2, 3, i+1, projection='3d')
+        ax.view_init(35, -135)
         surf = ax.plot_surface(X, Y, im, color='r')
 
 def dwt2(_im, _lp, _hp, levels):
@@ -249,74 +259,90 @@ def idwt2(_dwt2d, _lp, _hp, levels):
 if __name__ == '__main__':
 
     """2D undersampling"""
-    # X, Y, im = generate_2d_image(64)
-    # wavelet_im = np.zeros(im.shape)
-    # plot_surface(X, Y, [im])
-    #
-    # wl_name = 'haar'  # TODO: vary type of wavelet #vol_img = sitk.Image(sz,sz,sz,sitk.sitkUInt8)
-    # lp_d, hp_d, lp_r, hp_r = map(np.array, pywt.Wavelet(wl_name).filter_bank)
-    # # number of decomposition levels #mask = np.random.randint(0,2,size=(H, D)).astype(np.bool)
-    # num_levels = 2  # TODO: vary number of decomposition levels #
-    #
-    # # apply discrete wavelet tran_fftsform (DWT) #
-    # dwt = dwt2(im, lp_d, hp_d, levels=num_levels)  # TODO: call wavelet transform #
-    # (M, N) = dwt.shape
-    # (M2, N2) = map(lambda x: int(np.ceil(x/2)), (M, N))
-    # wavelet_im[M2:, N2:] = dwt[M2:, N2:] # partial wavelet image
-    #
-    # idwt_im = idwt2(wavelet_im, lp_r, hp_r, levels=num_levels)
-    #
-    # wl_im_fft, wl_im_fft_rd_us, wl_im_rd_us = basic_psf(idwt_im)
-    #
-    # wavelet_im_rd_us = dwt2(np.real(wl_im_rd_us), lp_d, hp_d, levels=num_levels)
-    # plot_surface(X, Y, [wavelet_im_rd_us])
-    # plt.show()
+    X, Y, im = generate_2d_image(32)
+    wavelet_im = np.zeros(im.shape)
+
+    """Without transform"""
+    # im_fft, im_fft_rd_us, im_rd_us = basic_psf(im)
+    # subplot_surfaces(X, Y, [im, im_fft, im_rd_us, im_fft_rd_us])
+    # plt.savefig('/home/niels/Documents/hl2027_proj_1/plots/figure_4/no_wl.png', dpi='figure', format='png')
+
+    """With transform"""
+    wl_name = 'haar'  # TODO: vary type of wavelet #vol_img = sitk.Image(sz,sz,sz,sitk.sitkUInt8)
+    lp_d, hp_d, lp_r, hp_r = map(np.array, pywt.Wavelet(wl_name).filter_bank)
+    # number of decomposition levels #mask = np.random.randint(0,2,size=(H, D)).astype(np.bool)
+    num_levels = 3  # TODO: vary number of decomposition levels #
+
+    # apply discrete wavelet transform (DWT) #
+    dwt = dwt2(im, lp_d, hp_d, levels=num_levels)  # TODO: call wavelet transform #
+    (M, N) = dwt.shape
+    (M2, N2) = map(lambda x: int(np.ceil(x/2)), (M, N))
+    wavelet_im[int(M2/2):M2, :int(N2/2)] = dwt[int(M2/2):M2, :int(N2/2)] # partial wavelet image
+
+    idwt_im = idwt2(wavelet_im, lp_r, hp_r, levels=num_levels)
+
+    im_fft, im_fft_rd_us, im_rd_us = basic_psf(idwt_im)
+
+    wavelet_im_rd_us = dwt2(np.real(im_rd_us), lp_d, hp_d, levels=num_levels)
+    subplot_surfaces(X, Y, [wavelet_im, idwt_im, im_fft, wavelet_im_rd_us, im_rd_us, im_fft_rd_us])
+    plt.savefig('/home/niels/Documents/hl2027_proj_1/plots/figure_4/with_wl.png', dpi='figure', format='png')
+    plt.show()
 
     """Volumetric undersampling"""
-    slice_loc = 16
-    X, Y, vol = generate_3d_vol(32, slice_loc, slice_loc, slice_loc)
-    # plot_surface(X, Y, [vol[slice_loc, :, :]])
-    N = len(vol)
-    (M, N, D) = vol.shape
-
-    wavelet_slice = np.zeros((M, N))
-    (M2, N2) = map(lambda x: int(np.ceil(x/2)), (M, N))
-    print(M2, N2)
-    wl_name = 'haar'  # TODO: vary type of wavelet
-    lp_d, hp_d, lp_r, hp_r = map(np.array, pywt.Wavelet(wl_name).filter_bank)
+    # slice_loc = 16
+    # X, Y, vol = generate_3d_vol(32, slice_loc, slice_loc, slice_loc)
+    # vol_high_res = np.copy(vol)
+    # vol_low_res = np.copy(vol)
+    # # plot_surface(X, Y, [vol[slice_loc, :, :]])
+    # N = len(vol)
+    # (M, N, D) = vol.shape
+    #
+    # wavelet_slice_high_res = np.zeros((M, N))
+    # wavelet_slice_low_res = np.zeros((M, N))
+    # (M2, N2) = map(lambda x: int(np.ceil(x/2)), (M, N))
+    # print(M2, N2)
+    # wl_name = 'haar'  # TODO: vary type of wavelet
+    # lp_d, hp_d, lp_r, hp_r = map(np.array, pywt.Wavelet(wl_name).filter_bank)
     #
     # number of decomposition levels
-    num_levels = 3  # TODO: vary number of decomposition levels #
-    dwt = dwt2(vol[slice_loc, :, :], lp_d, hp_d, levels=num_levels)
+    # num_levels = 3  # TODO: vary number of decomposition levels #
+    # dwt = dwt2(vol[slice_loc, :, :], lp_d, hp_d, levels=num_levels)
     # plot_surface(X, Y, [dwt])
-    wavelet_slice[M2:, N2:] = dwt[M2:, N2:] # Grab one of the resolution levels
-    # plot_surface(X, Y, [wavelet_slice])
-    im_slice = idwt2(wavelet_slice, lp_r, hp_r, levels=num_levels)
-    vol[slice_loc, :, :] = im_slice
-    # plot_surface(X, Y, [vol[slice_loc, :, :]])
+    """High resolution"""
+    # wavelet_slice_high_res[:M2, N2:] = dwt[:M2, N2:] # High res part
+    # im_slice_high_res = idwt2(wavelet_slice_high_res, lp_r, hp_r, levels=num_levels)
+    # vol_high_res[slice_loc, :, :] = im_slice_high_res
+    # plot_surface(X, Y, [vol_high_res[slice_loc, :, :]])
+    """Low resolution"""
+    # wavelet_slice_low_res[:int(M2/4), :int(N2/4)] = dwt[:int(M2/4), :int(N2/4)] # Low res part
+    # im_slice_low_res = idwt2(wavelet_slice_low_res, lp_r, hp_r, levels=num_levels)
+    # vol_low_res[slice_loc, :, :] = im_slice_low_res
 
     """Single-slice undersampling 2DFT"""
-    # vol_rd_us_1D_im = TPSF_2DFT(vol, (0,1))
+    # vol_rd_us_1D_im = PSF_2DFT(vol_low_res, (0,1))
     # plot_surface(X, Y, [vol_rd_us_1D_im[slice_loc, :, :]])
     # vol_rd_us_1d_wave = np.zeros(vol_rd_us_1D_im.shape)
     # for i in range(M):
     #     vol_rd_us_1d_wave[i, :, :] = dwt2(np.real(vol_rd_us_1D_im[i, :, :]), lp_r, hp_r, levels=num_levels)
     # plot_surface(X, Y, [np.abs(vol_rd_us_1d_wave[slice_loc, :, :])])
+    # plt.savefig('/home/niels/Documents/hl2027_proj_1/plots/2DFT/low_res.png', dpi='figure', format='png')
 
     """Multi-slice undersampling 2DFT"""
-    vol_rd_us_multi_im = TPSF_multi_slice_2DFT(vol, (0, 1))
-    plot_surface(X, Y, [vol_rd_us_multi_im[slice_loc, :, :]])
-    vol_rd_us_multi_wave = np.zeros(vol_rd_us_multi_im.shape)
-    for i in range(M):
-        vol_rd_us_multi_wave[i, :, :] = dwt2(np.real(vol_rd_us_multi_im[i, :, :]), lp_r, hp_r, levels=num_levels)
-    plot_surface(X, Y, [vol_rd_us_multi_wave[slice_loc, :, :]])
+    # vol_rd_us_multi_im = PSF_multi_slice_2DFT(vol_high_res, (0, 1))
+    # plot_surface(X, Y, [vol_rd_us_multi_im[slice_loc, :, :]])
+    # vol_rd_us_multi_wave = np.zeros(vol_rd_us_multi_im.shape)
+    # for i in range(M):
+    #     vol_rd_us_multi_wave[i, :, :] = dwt2(np.real(vol_rd_us_multi_im[i, :, :]), lp_r, hp_r, levels=num_levels)
+    # plot_surface(X, Y, [np.abs(vol_rd_us_multi_wave[slice_loc, :, :])])
+    # plt.savefig('/home/niels/Documents/hl2027_proj_1/plots/multi_slice_2DFT/high_res.png', dpi='figure', format='png')
 
     """3DFT"""
-    # vol_rd_us_3D_im = TPSF_3DFT(vol)
+    # vol_rd_us_3D_im = TPSF_3DFT(vol_low_res)
     # plot_surface(X, Y, [vol_rd_us_3D_im[slice_loc, :, :]])
     # vol_rd_us_3D_wave = np.zeros(vol_rd_us_3D_im.shape)
     # for i in range(M):
     #     vol_rd_us_3D_wave[i, :, :] = dwt2(np.real(vol_rd_us_3D_im[i, :, :]), lp_r, hp_r, levels=num_levels)
-    # plot_surface(X, Y, [vol_rd_us_3D_wave[slice_loc, :, :]])
-
-    plt.show()
+    # plot_surface(X, Y, [np.abs(vol_rd_us_3D_wave[slice_loc, :, :])])
+    # plt.savefig('/home/niels/Documents/hl2027_proj_1/plots/3DFT/low_res.png', dpi='figure', format='png')
+    #
+    # plt.show()
