@@ -2,6 +2,9 @@ import skimage
 import numpy as np
 from numpy.fft import *
 import matplotlib.pyplot as plt
+import matplotlib
+from matplotlib.colors import LogNorm
+from scipy import  stats
 import os
 import scipy.io as spio
 import pywt
@@ -35,8 +38,10 @@ def fft2c(image):
     Apply 2d fourier transform to image
 
     """
+    h, w = image.shape
+
     _im = np.copy(image)
-    _im_freq = fftshift(fft2(ifftshift(_im)))
+    _im_freq = (1/np.sqrt(h*w))*fftshift(fft2(ifftshift(_im)))
 
     return _im_freq
 
@@ -45,10 +50,15 @@ def ifft2c(image):
     Apply inverse 2d fourier transform to image
 
     """
+    h,w = image.shape
+
     _im = np.copy(image)
-    _im_freq = fftshift(ifft2(ifftshift(_im)))
+    _im_freq = (np.sqrt(h*w))*fftshift(ifft2(ifftshift(_im)))
 
     return _im_freq
+
+def generate_pdf(mask):
+    return stats.norm.pdf(mask, loc=0.0, scale=1.0)
 
 def generate_mask(im, type):
     '''
@@ -65,7 +75,7 @@ def generate_mask(im, type):
         _mask[_rows, :] = 1
         return _mask
     elif type == 'xlines':
-        _columns = np.random.randint(0, w, [1, 50])
+        _columns = np.random.randint(0, w, [1, 100])
         _mask = np.zeros(im.shape)
         _mask[:, _columns] = 1
         return _mask
@@ -84,19 +94,19 @@ def POCS_algorithm(image, mask, pdf, thresh, filter_type="db1", n_iter=15):
     _DATA = np.multiply(fft2c(_im), mask)
     _DATA = np.fft.fftshift(_DATA) # Why is this line necessary?
     _im_cs = np.fft.ifft2(np.divide(_DATA, pdf))
-    _im_cs = _im
+
     lp_d, hp_d, lp_r, hp_r = map(np.array, pywt.Wavelet(filter_type).filter_bank)
 
     plt.figure()
     for i in range(n_iter):
         _im_cs = dwt2(np.abs(_im_cs), lp_d, hp_d, levels=1) # Apply wavelet transform
-        _im_cs = new_soft_thresh(_im_cs, thresh) # Soft thresholding on the wavelet transform to retrieve high frequency content
-        _im_cs = idwt2(_im_cs, lp_r, hp_r, levels=1) # Inverse wavelet transform using compressed version
+        _im_wav = new_soft_thresh(_im_cs, thresh) # Soft thresholding on the wavelet transform to retrieve high frequency content
+        _im_cs = idwt2(_im_wav, lp_r, hp_r, levels=1) # Inverse wavelet transform using compressed version
+
         _im_cs = ifft2c(np.multiply(fft2c(_im_cs), 1 - mask) + _DATA) # Undersample the fourier spectra of the compressed version of _im_cs, add base _DATA
         plt.imshow(np.abs(_im_cs), cmap='gray')
         plt.title("Iteration: {}".format(i))
         plt.pause(0.5)
-        #plt.show()
 
     # Plot for comparison
     plt.figure(figsize = (10, 10))
@@ -123,23 +133,6 @@ def hard_thresh(_im, _thresh):
 
     '''
     return np.abs(_im) > _thresh
-
-def soft_thresh(_im, _thresh):
-    """
-    Apply soft (lower) threshold mask to given image data.
-
-    :param _im: 2D image data
-    :type _im: np.ndarray
-    :param _thresh: scalar threshold parameter
-    :type _thresh: float
-    :return: thresholded image
-    :rtype: np.ndarray
-    """
-
-    # mask image #
-    _mask = _im>_thresh  # TODO: mask image data #
-
-    return _mask * (np.abs(_im) - _thresh) * np.sign(_im)
 
 def dwt2(_im, _lp, _hp, levels):
     """
@@ -264,8 +257,9 @@ if __name__ == '__main__':
     # test = new_soft_thresh(im, 0.025)
     # plt.imshow(np.abs(im_us), cmap='gray')
 
-    mask = generate_mask(im, 'xlines')
-    POCS_algorithm(im, mask, pdf_unif, 0.025)
+    mask = generate_mask(im, 'fakeradials')
+
+    POCS_algorithm(im, mask_vardens, pdf_vardens, 0.025)
     plt.figure()
-    plt.imshow(np.abs(mask), cmap='gray')
+    plt.imshow(np.abs(mask_vardens), cmap='gray')
     plt.show()
